@@ -46,6 +46,8 @@ std::vector < std::string > split(const std::string & text,
   return tokens;
 }
 
+enum sites {pornhub, xvideos, xtube, South};
+
 int main(int argc, char ** argv) {
 
   string embed;
@@ -71,29 +73,34 @@ int main(int argc, char ** argv) {
   string value;
   string sqlstring;
   string query;
+  string site;
+  string delim;
   int count;
   int insertcount;
-  double lastid;
-  double tagid;
-  double catid;
+  int fieldlen;
+  int sitenum;
+  int titlenum, pornstarnum, i;
+  string *names;
+  string *data;
   char buffer [100];
   std::string s;
   sql::Driver * driver;
   sql::Connection * con;
   sql::ResultSet * res;
-  sql::PreparedStatement * pstmt;
+  //sql::PreparedStatement * pstmt;
   sql::Statement * stmt;
   ifstream inputfile;
   ofstream outputfile;
   ofstream errorfile;
   ofstream catfile;
   ofstream tagfile;
-  ofstream debugfile;
 
   vector < string > tags_vector;
   vector < string > cats_vector;
   vector < string > pornstars_vector;
   vector < string > files_vector;
+
+
 
   if (argc == 1) {
     inputfile.open("videos.csv");
@@ -101,9 +108,10 @@ int main(int argc, char ** argv) {
     errorfile.open("errors.txt");
     catfile.open("cats.txt");
     tagfile.open("tags.txt");
-  } else if (argc == 3) {
+  } else if (argc == 4) {
     dirname = argv[1];
     ofilename = argv[2];
+    sitenum = atoi(argv[3]);
     outputfile.open(ofilename);
     errorfile.open("errors.txt");
     catfile.open("cats.txt");
@@ -113,7 +121,59 @@ int main(int argc, char ** argv) {
     cout << "USAGE:";
     return (2);
   }
-  debugfile.open("debug.txt");
+
+  switch(sitenum) {
+   case 1  :
+   insertsql = "Insert into videos (site, embed, thumb, title, tags, category,  pornstars, \
+      duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES ";
+   fieldlen = 12;
+   names = new string[fieldlen];
+   data = new string[fieldlen];
+   site = "pornhub.com";
+   titlenum = 2;
+   pornstarnum = 5;
+   delim = "|";
+   names[0] = "embed";
+   names[1] = "thumb";
+   names[2] = "title";
+   names[3] = "tags";
+   names[4] = "category";
+   names[5] = "pornstars";
+   names[6] = "duration";
+   names[7] = "views";
+   names[8] = "likes";
+   names[9] = "dislikes";
+   names[10] = "bigthumb";
+   names[11] = "bigthumbs";
+   std::regex rgx(".*src=\"(.*?)\"");
+   std::smatch match;
+
+
+
+      break; //optional
+   case 2  :
+   insertsql = "Insert into videos (site, weblink, title, duration, thumb, embed, tags, pornstars, video_id,category) VALUES ";
+   fieldlen = 10;
+   names = new string[fieldlen];
+   data = new string[fieldlen];
+   site = "xvideos.com";
+   titlenum = 1;
+   pornstarnum = 7;
+   names[0] = "weblink";
+   names[1] = "title";
+   names[2] = "title";
+   names[3] = "duration";
+   names[4] = "thumb";
+   names[5] = "embed";
+   names[6] = "tags";
+   names[7] = "pornstars";
+   names[8] = "video_id";
+   names[9] = "category";
+
+      break; //optional
+
+}
+
 
 
   /* Create a connection */
@@ -121,10 +181,9 @@ int main(int argc, char ** argv) {
   con = driver -> connect("tcp://127.0.0.1:3306", "mysqluser", "DaBus099");
   /* Connect to the MySQL test database */
   con -> setSchema("videos");
-  std::regex rgx(".*src=\"(.*?)\"");
-  std::smatch match;
 
-  pstmt = con -> prepareStatement("Insert into videos (site, embed, thumb, title, tags, category,  pornstars, \
+
+  //pstmt = con -> prepareStatement("Insert into videos (site, embed, thumb, title, tags, category,  pornstars, \
         duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) \
         VALUES ('pornhub.com', ?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
@@ -137,7 +196,7 @@ int main(int argc, char ** argv) {
 
   DIR *folder;
   struct dirent *entry;
-  int files = 0;
+
 
   folder = opendir(argv[1]);
   if(folder == NULL)
@@ -189,58 +248,57 @@ int main(int argc, char ** argv) {
       count++;
       insertcount++;
 
-      getline(inputfile, embed, '|');
-      getline(inputfile, thumb, '|');
-      getline(inputfile, thumbs, '|');
-      getline(inputfile, title, '|');
-      getline(inputfile, tags, '|');
-      getline(inputfile, category, '|');
-      getline(inputfile, pornstars, '|');
-      getline(inputfile, duration, '|');
-      getline(inputfile, views, '|');
-      getline(inputfile, likes, '|');
-      getline(inputfile, dislikes, '|');
-      getline(inputfile, bigthumb, '|');
-      getline(inputfile, bigthumbs, '\n');
+      for(i=0;i<(fieldlen - 1);i++)
+      {
+        getline(inputfile, data[i], delim);
+      }
+      getline(inputfile, data[fieldlen - 1], '\n');
 
-      title = mysql_conn->escapeString( title );
-      pornstars = mysql_conn->escapeString( pornstars );
+      data[titlenum] = mysql_conn->escapeString( data[titlenum] );
+      data[pornstarnum] = mysql_conn->escapeString( data[pornstarnum] );
 
-      if (views == "") {
-        views = "0";
-      }
-      if (likes == "") {
-        likes = "0";
-      }
-      if (dislikes == "") {
-        dislikes = "0";
-      }
-      if (duration == "") {
-        duration = "0";
+      switch(sitenum)
+      {
+        case 1:
+        if (std::regex_search(data[0], match, rgx)) {
+          //std::cout << "match: " << match[1] << '\n';
+        }
+        temp = match[1];
+        video_id = temp.substr(temp.find_last_of("/\\") + 1);
+        value = "('" + site + "'," + data[0] + "','";
+        value = value + data[1] + "','";
+        value = value + data[2] + "','";
+        value = value + data[3] + "','";
+        value = value + data[4] + "','";
+        value = value + data[5] + "','";
+        value = value + data[6] + "','";
+        value = value + data[7] + "','";
+        value = value + data[8] + "','";
+        value = value + data[9] + "','";
+        value = value + data[10] + "','";
+        value = value + data[11] + "','";
+        value = value + video_id + "')," + "\n";
+
+        //pstmt = con -> prepareStatement("Insert into videos \
+        (site, embed, thumb, title, tags, category,  pornstars, \
+              duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) \
+              VALUES ('pornhub.com', ?,?,?,?,?,?,?,?,?,?,?,?,?)");
+
+        break;
+        case 2:
+
+        break;
       }
 
-      if (std::regex_search(embed, match, rgx)) {
-        //std::cout << "match: " << match[1] << '\n';
-      }
 
-      temp = match[1];
-      video_id = temp.substr(temp.find_last_of("/\\") + 1);
+
+
+
+
       //cout << "This is video id: " << video_id << endl;
       //cout << "This is title: " << title << endl;
       //cout << "This is duration: " << duration << endl;
-      value = "('pornhub.com','" + embed + "','";
-      value = value + thumb + "','";
-      value = value + title + "','";
-      value = value + tags + "','";
-      value = value + category + "','";
-      value = value + pornstars + "','";
-      value = value + duration + "','";
-      value = value + views + "','";
-      value = value + likes + "','";
-      value = value + dislikes + "','";
-      value = value + bigthumb + "','";
-      value = value + bigthumbs + "','";
-      value = value + video_id + "')," + "\n";
+
 
 
       // pstmt -> setString(1, embed);
@@ -263,7 +321,7 @@ int main(int argc, char ** argv) {
         values = values + value;
       }
 
-      if (insertcount == 5000) {
+      if (insertcount == 1000) {
         values = values.substr(0, values.length() - 2);
         sqlstring = insertsql + values + ";";
         outputfile << sqlstring << "\n";
@@ -274,7 +332,7 @@ int main(int argc, char ** argv) {
         insertcount = 0;
         values = "";
       }
-      lastid = 0;
+
       //pstmt -> executeUpdate();
       // sqlstring = "SELECT LAST_INSERT_ID() AS id;";
       // res = stmt -> executeQuery(sqlstring);
@@ -397,7 +455,7 @@ outputfile.close();
 errorfile.close();
 catfile.close();
 tagfile.close();
-debugfile.close();
+
 
 return (0);
 }

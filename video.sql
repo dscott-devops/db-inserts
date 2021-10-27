@@ -1,0 +1,27 @@
+CREATE TABLE `videos` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `site` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `embed` text COLLATE utf8_unicode_ci,
+  `pornstars` text COLLATE utf8_unicode_ci,
+  `category` text COLLATE utf8_unicode_ci,
+  `duration` int(11) DEFAULT NULL,
+  `views` int(11) DEFAULT NULL,
+  `likes` int(11) DEFAULT NULL,
+  `dislikes` int(11) DEFAULT NULL,
+  `bigthumb` text COLLATE utf8_unicode_ci,
+  `bigthumbs` text COLLATE utf8_unicode_ci,
+  `weblink` text COLLATE utf8_unicode_ci,
+  `title` text COLLATE utf8_unicode_ci,
+  `thumb` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `tags` text COLLATE utf8_unicode_ci,
+  `video_id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `thumbs` text COLLATE utf8_unicode_ci,
+  `preview` text COLLATE utf8_unicode_ci,
+  `description` text COLLATE utf8_unicode_ci,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `index_videos_on_site` (`site`),
+  KEY `index_videos_on_video_id` (`video_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3362754 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci; 
+

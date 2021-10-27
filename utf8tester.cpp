@@ -14,6 +14,8 @@
 
 #include <regex>
 
+#include "/home/dscott/c++/source/utf8.h"
+
 #include <boost/algorithm/string/replace.hpp>
 
 #include "mysql_connection.h"
@@ -203,6 +205,12 @@ int main(int argc, char ** argv) {
       getline(inputfile, bigthumb, '|');
       getline(inputfile, bigthumbs, '\n');
 
+      string::iterator end_it = utf8::find_invalid(title.begin(), title.end());
+        if (end_it != title.end()) {
+            cout << "Invalid UTF-8 encoding detected at line \n";
+            catfile << title <<"\n";
+        }
+
       title = mysql_conn->escapeString( title );
       pornstars = mysql_conn->escapeString( pornstars );
 
@@ -263,7 +271,7 @@ int main(int argc, char ** argv) {
         values = values + value;
       }
 
-      if (insertcount == 5000) {
+      if (insertcount == 1000) {
         values = values.substr(0, values.length() - 2);
         sqlstring = insertsql + values + ";";
         outputfile << sqlstring << "\n";
