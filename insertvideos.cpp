@@ -88,6 +88,8 @@ int main(int argc, char ** argv) {
   ofstream errorfile;
   ofstream catfile;
   ofstream tagfile;
+  ofstream debugfile;
+
   vector < string > tags_vector;
   vector < string > cats_vector;
   vector < string > pornstars_vector;
@@ -111,7 +113,7 @@ int main(int argc, char ** argv) {
     cout << "USAGE:";
     return (2);
   }
-
+  debugfile.open("debug.txt");
 
 
   /* Create a connection */
@@ -127,6 +129,7 @@ int main(int argc, char ** argv) {
         VALUES ('pornhub.com', ?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
   stmt = con -> createStatement();
+  sql::mysql::MySQL_Connection * mysql_conn = dynamic_cast<sql::mysql::MySQL_Connection*>(con);
   count = 0;
   insertcount = 0;
 
@@ -179,7 +182,7 @@ int main(int argc, char ** argv) {
 
   //pstmt = con->prepareStatement("INSERT INTO videos_test(,bid,ask) VALUES (?,?,?)");
   //pstmt = con->prepareStatement("INSERT into videos (site, embed, thumb, title, tags, category,pornstars,duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-  insertsql = "Insert into videos_test (site, embed, thumb, title, tags, category,  pornstars,  duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES ";
+  insertsql = "Insert into videos (site, embed, thumb, title, tags, category,  pornstars,  duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES ";
   while (inputfile.good()) {
 
     try {
@@ -199,6 +202,9 @@ int main(int argc, char ** argv) {
       getline(inputfile, dislikes, '|');
       getline(inputfile, bigthumb, '|');
       getline(inputfile, bigthumbs, '\n');
+
+      title = mysql_conn->escapeString( title );
+      pornstars = mysql_conn->escapeString( pornstars );
 
       if (views == "") {
         views = "0";
@@ -234,21 +240,22 @@ int main(int argc, char ** argv) {
       value = value + dislikes + "','";
       value = value + bigthumb + "','";
       value = value + bigthumbs + "','";
-      value = value + video_id + "');" + "\n";
+      value = value + video_id + "')," + "\n";
 
-      pstmt -> setString(1, embed);
-      pstmt -> setString(2, thumb);
-      pstmt -> setString(3, title);
-      pstmt -> setString(4, tags);
-      pstmt -> setString(5, category);
-      pstmt -> setString(6, pornstars);
-      pstmt -> setString(7, duration);
-      pstmt -> setString(8, views);
-      pstmt -> setString(9, likes);
-      pstmt -> setString(10, dislikes);
-      pstmt -> setString(11, bigthumb);
-      pstmt -> setString(12, bigthumbs);
-      pstmt -> setString(13, video_id);
+
+      // pstmt -> setString(1, embed);
+      // pstmt -> setString(2, thumb);
+      // pstmt -> setString(3, title);
+      // pstmt -> setString(4, tags);
+      // pstmt -> setString(5, category);
+      // pstmt -> setString(6, pornstars);
+      // pstmt -> setString(7, duration);
+      // pstmt -> setString(8, views);
+      // pstmt -> setString(9, likes);
+      // pstmt -> setString(10, dislikes);
+      // pstmt -> setString(11, bigthumb);
+      // pstmt -> setString(12, bigthumbs);
+      // pstmt -> setString(13, video_id);
 
       if (values == "") {
         values = value;
@@ -256,14 +263,21 @@ int main(int argc, char ** argv) {
         values = values + value;
       }
 
-      if (insertcount == 10) {
+      if (insertcount == 1000) {
         values = values.substr(0, values.length() - 2);
-        //outputfile << insertsql  << "\n" << values << ";" << endl;
+        sqlstring = insertsql + values + ";";
+        debugfile << "Insert: " << "\n";
+        debugfile << sqlstring << "\n\n\n";
+        outputfile << sqlstring << "\n";
+        //stmt -> execute(sqlstring);
+        cout << "Records completed: " << count << endl;
+
+
         insertcount = 0;
         values = "";
       }
       lastid = 0;
-      pstmt -> executeUpdate();
+      //pstmt -> executeUpdate();
       // sqlstring = "SELECT LAST_INSERT_ID() AS id;";
       // res = stmt -> executeQuery(sqlstring);
       // res -> next();
@@ -369,7 +383,7 @@ int main(int argc, char ** argv) {
 
     }
 
-      cout << "Records completed: " << count << endl;
+
 
   }  //end while
 
@@ -385,6 +399,7 @@ outputfile.close();
 errorfile.close();
 catfile.close();
 tagfile.close();
+debugfile.close();
 
 return (0);
 }
