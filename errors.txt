@@ -46,3 +46,21 @@ SQL String:
 # ERR: SQLException in classify.cpp(classThread) on line 116
 # ERR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'Neil'' at line 1 (MySQL error code: 1064, SQLState: 42000 )
 SQL String: 
+# ERR: SQLException in classify.cpp(classThread) on line 116
+# ERR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'Alessandro'' at line 1 (MySQL error code: 1064, SQLState: 42000 )
+SQL String: 
+# ERR: SQLException in classify.cpp(classThread) on line 116
+# ERR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'Neil'' at line 1 (MySQL error code: 1064, SQLState: 42000 )
+SQL String: 
+# ERR: SQLException in classify.cpp(classThread) on line 116
+# ERR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'Neil'' at line 1 (MySQL error code: 1064, SQLState: 42000 )
+SQL String: 
+# ERR: SQLException in classify.cpp(classThread) on line 116
+# ERR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'Neil'' at line 1 (MySQL error code: 1064, SQLState: 42000 )
+SQL String: 
+# ERR: SQLException in classify.cpp(classThread) on line 114
+# ERR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'Alessandro'' at line 1 (MySQL error code: 1064, SQLState: 42000 )
+SQL String: 
+# ERR: SQLException in classify.cpp(classThread) on line 114
+# ERR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'Alessandro'' at line 1 (MySQL error code: 1064, SQLState: 42000 )
+SQL String: 

@@ -95,7 +95,7 @@ int main(int argc, char ** argv) {
   ofstream catfile;
   ofstream tagfile;
 
-  vector < string > tags_vector;
+  vector < string > duration_vector;
   vector < string > cats_vector;
   vector < string > pornstars_vector;
   vector < string > files_vector;
@@ -224,12 +224,6 @@ int main(int argc, char ** argv) {
   for (std::string str: files_vector) {
     cout << "Files: " << str << endl;
 
-
-
-
-
-
-
       ifilename = dirname + "/" + str;
       cout << "Filename: " << ifilename << endl;
       inputfile.open(ifilename);
@@ -239,16 +233,13 @@ int main(int argc, char ** argv) {
         return (3);
       }
 
-  //pstmt = con->prepareStatement("INSERT INTO videos_test(,bid,ask) VALUES (?,?,?)");
-  //pstmt = con->prepareStatement("INSERT into videos (site, embed, thumb, title, tags, category,pornstars,duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-  insertsql = "Insert into videos (site, embed, thumb, title, tags, category,  pornstars,  duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES ";
-  while (inputfile.good()) {
+    while (inputfile.good()) {
 
     try {
       count++;
       insertcount++;
 
-      for(i=0;i<(fieldlen - 1);i++)
+      for(i=0;i<(fieldlen - 2);i++)
       {
         getline(inputfile, data[i], delim);
       }
@@ -286,6 +277,37 @@ int main(int argc, char ** argv) {
 
         break;
         case 2:
+        for(i=0;i<(fieldlen - 2);i++)
+        {
+          getline(inputfile, data[i], delim);
+        }
+        getline(inputfile, data[fieldlen - 1], '\n');
+
+        names[0] = "weblink";
+        names[1] = "title";
+        names[2] = "title";
+        names[3] = "duration";
+        names[4] = "thumb";
+        names[5] = "embed";
+        names[6] = "tags";
+        names[7] = "pornstars";
+        names[8] = "video_id";
+        names[9] = "category";
+
+        duration_vector = split(data[3]," ");
+
+        data[3] = duration_vector.front();
+
+        value = "('" + site + "'," + data[0] + "','";
+        value = value + data[1] + "','";
+        value = value + data[2] + "','";
+        value = value + data[3] + "','";
+        value = value + data[4] + "','";
+        value = value + data[5] + "','";
+        value = value + data[6] + "','";
+        value = value + data[7] + "','";
+        value = value + data[8] + "','";
+        value = value + data[9] + "')," + "\n";
 
         break;
       }
@@ -295,25 +317,6 @@ int main(int argc, char ** argv) {
 
 
 
-      //cout << "This is video id: " << video_id << endl;
-      //cout << "This is title: " << title << endl;
-      //cout << "This is duration: " << duration << endl;
-
-
-
-      // pstmt -> setString(1, embed);
-      // pstmt -> setString(2, thumb);
-      // pstmt -> setString(3, title);
-      // pstmt -> setString(4, tags);
-      // pstmt -> setString(5, category);
-      // pstmt -> setString(6, pornstars);
-      // pstmt -> setString(7, duration);
-      // pstmt -> setString(8, views);
-      // pstmt -> setString(9, likes);
-      // pstmt -> setString(10, dislikes);
-      // pstmt -> setString(11, bigthumb);
-      // pstmt -> setString(12, bigthumbs);
-      // pstmt -> setString(13, video_id);
 
       if (values == "") {
         values = value;

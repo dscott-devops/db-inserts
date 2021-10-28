@@ -48,11 +48,10 @@ std::vector < std::string > split(const std::string & text,
   return tokens;
 }
 
-void classThread(int video_id, string tablename, string items, string *values)
+void classThread(sql::Connection * con, int video_id, string tablename, string items, string *values)
 {
 
-  sql::Driver * driver;
-  sql::Connection *con=NULL;
+
   sql::Statement *stmt=NULL;
   sql::ResultSet *res=NULL;
 
@@ -63,9 +62,8 @@ void classThread(int video_id, string tablename, string items, string *values)
   items_vector = split(items, ";");
   try
   {
-    driver = get_driver_instance();
-    con = driver -> connect("tcp://127.0.0.1:3306", "mysqluser", "DaBus099");
-    con -> setSchema("videos");
+
+
     stmt = con -> createStatement();
 
 
@@ -125,16 +123,10 @@ void classThread(int video_id, string tablename, string items, string *values)
 
   }
 
-          delete res;
-         res=NULL;
-         delete stmt;
-         stmt=NULL;
-         con->close();
-         delete con;
-         con=NULL;
-         // this step is necessary to avoid memory leak, though it is not mentioned in the document
-         driver->threadEnd();
-         driver=NULL;
+
+delete res;
+delete stmt;
+
 
 
 
@@ -242,13 +234,11 @@ int main() {
     //   cats_vector = split(category, ";");
     //   pornstars_vector = split(pornstars, ";");
 
-        thread tag1(classThread, videoid, "tags", tags,&tagvalues);
-        thread cats1(classThread,videoid, "categories", category,&catvalues);
-        thread porns1(classThread, videoid, "pornstars", pornstars,&pornstarvalues);
+        classThread(con,videoid, "tags", tags,&tagvalues);
+        classThread(con,videoid, "categories", category,&catvalues);
+        classThread(con, videoid, "pornstars", pornstars,&pornstarvalues);
 
-        tag1.join();
-        cats1.join();
-        porns1.join();
+
 
         cout << "Records Completed: " << count << endl;
 
