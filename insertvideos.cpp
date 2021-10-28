@@ -386,6 +386,8 @@ int main(int argc, char ** argv) {
   }  //end while
 
   std::cout << "Records found: " << count << '\n';
+
+
   inputfile.close();
 
 
@@ -393,6 +395,15 @@ int main(int argc, char ** argv) {
 
 
 } //for files_vector
+
+if (insertcount < 5000)
+{
+  values = values.substr(0, values.length() - 2);
+  sqlstring = insertsql + values + ";";
+  outputfile << sqlstring << "\n";
+  //stmt -> execute(sqlstring);
+
+}
 outputfile.close();
 errorfile.close();
 catfile.close();

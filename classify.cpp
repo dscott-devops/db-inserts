@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include <thread>
+
 #include <iostream>
 
 #include <fstream>
@@ -46,7 +48,102 @@ std::vector < std::string > split(const std::string & text,
   return tokens;
 }
 
-int main(int argc, char ** argv) {
+void classThread(int video_id, string tablename, string items, string *values)
+{
+
+  sql::Driver * driver;
+  sql::Connection *con=NULL;
+  sql::Statement *stmt=NULL;
+  sql::ResultSet *res=NULL;
+
+  vector < string > items_vector;
+  string query,sqlstring;
+  int itemid;
+  ofstream errorfile;
+  items_vector = split(items, ";");
+  try
+  {
+    driver = get_driver_instance();
+    con = driver -> connect("tcp://127.0.0.1:3306", "mysqluser", "DaBus099");
+    con -> setSchema("videos");
+    stmt = con -> createStatement();
+
+
+    if (items != "")
+    {
+  for (std::string str: items_vector) {
+      //std::cout << str << std::endl;
+      query = "Select id from " + tablename + " where name ='";
+      query = query + str;
+      query = query + "';";
+      //cout << "Select ID" << endl;
+      res = stmt -> executeQuery(query);
+      while(res -> next())
+      {
+      itemid = res -> getInt("id");
+      sqlstring = "(";
+      sqlstring = sqlstring + to_string(int(itemid));
+      sqlstring = sqlstring + ",";
+      sqlstring = sqlstring + to_string(int(video_id));
+      sqlstring = sqlstring + "),";
+      *values = *values + sqlstring;
+      }
+      //cout << "Tag Insert: " << str << endl;
+      //stmt -> execute(sqlstring);
+      //cout << "Tag Successfully created" << endl;
+
+    } //for tags vector
+  }
+  }
+  catch (sql::SQLException & e) {
+    /*
+      MySQL Connector/C++ throws three different exceptions:
+
+      - sql::MethodNotImplementedException (derived from sql::SQLException)
+      - sql::InvalidArgumentException (derived from sql::SQLException)
+      - sql::SQLException (derived from std::runtime_error)
+    */
+      errorfile.open("errors.txt",fstream::app);
+    cout << "# ERR: SQLException in " << __FILE__;
+    cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+    /* what() (derived from std::runtime_error) fetches error message */
+    cout << "# ERR: " << e.what();
+    cout << " (MySQL error code: " << e.getErrorCode();
+    cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+    cout << "SQL String: " << sqlstring << endl;
+
+    errorfile << "# ERR: SQLException in " << __FILE__;
+    errorfile << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+    /* what() (derived from std::runtime_error) fetches error message */
+    errorfile << "# ERR: " << e.what();
+    errorfile << " (MySQL error code: " << e.getErrorCode();
+    errorfile << ", SQLState: " << e.getSQLState() << " )" << endl;
+    errorfile << "SQL String: " << sqlstring << endl;
+    errorfile.close();
+
+
+
+  }
+
+          delete res;
+         res=NULL;
+         delete stmt;
+         stmt=NULL;
+         con->close();
+         delete con;
+         con=NULL;
+         // this step is necessary to avoid memory leak, though it is not mentioned in the document
+         driver->threadEnd();
+         driver=NULL;
+
+
+
+
+}
+
+
+
+int main() {
 
   string embed;
   string ifilename;
@@ -56,6 +153,7 @@ int main(int argc, char ** argv) {
   string thumbs;
   string title;
   string tags;
+  string tagssql, catssql, pornssql;
   string category;
   string pornstars;
   string duration;
@@ -69,10 +167,15 @@ int main(int argc, char ** argv) {
   string insertsql;
   string values;
   string value;
+  string tagvalues;
+  string catvalues;
+  string pornstarvalues;
   string sqlstring;
   string query;
   int count;
+  int videoid;
   int insertcount;
+  int i;
   double lastid;
   double tagid;
   double catid;
@@ -81,89 +184,131 @@ int main(int argc, char ** argv) {
   sql::Driver * driver;
   sql::Connection * con;
   sql::ResultSet * res;
-  sql::PreparedStatement * pstmt;
   sql::Statement * stmt;
-  ifstream inputfile;
+
   ofstream outputfile;
-  ofstream errorfile;
-  ofstream catfile;
-  ofstream tagfile;
-  ofstream debugfile;
+
 
   vector < string > tags_vector;
   vector < string > cats_vector;
   vector < string > pornstars_vector;
   vector < string > files_vector;
 
-  if (argc == 1) {
-    inputfile.open("videos.csv");
-    outputfile.open("results.txt");
-    errorfile.open("errors.txt");
-    catfile.open("cats.txt");
-    tagfile.open("tags.txt");
-  } else if (argc == 3) {
-    dirname = argv[1];
-    ofilename = argv[2];
-    outputfile.open(ofilename);
-    errorfile.open("errors.txt");
-    catfile.open("cats.txt");
-    tagfile.open("tags.txt");
 
-  } else {
-    cout << "USAGE:";
-    return (2);
-  }
-  debugfile.open("debug.txt");
+  outputfile.open("results.txt");
 
 
-  /* Create a connection */
+
   driver = get_driver_instance();
   con = driver -> connect("tcp://127.0.0.1:3306", "mysqluser", "DaBus099");
   /* Connect to the MySQL test database */
   con -> setSchema("videos");
-  std::regex rgx(".*src=\"(.*?)\"");
-  std::smatch match;
 
-  pstmt = con -> prepareStatement("Insert into videos (site, embed, thumb, title, tags, category,  pornstars, \
-        duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) \
-        VALUES ('pornhub.com', ?,?,?,?,?,?,?,?,?,?,?,?,?)");
+
+
 
   stmt = con -> createStatement();
-  sql::mysql::MySQL_Connection * mysql_conn = dynamic_cast<sql::mysql::MySQL_Connection*>(con);
+
+
+
+
+
+
+
+
   count = 0;
   insertcount = 0;
-
-
-
-  DIR *folder;
-  struct dirent *entry;
-  int files = 0;
-
-  folder = opendir(argv[1]);
-  if(folder == NULL)
+  tagssql = "Insert into tag_videos (tag_id, video_id) Values ";
+  catssql = "Insert into category_videos (category_id, video_id) Values ";
+  pornssql = "Insert into pornstar_videos (pornstar_id, video_id) Values ";
+  sqlstring = "Select id, pornstars, tags, category from videos LIMIT 5000 OFFSET ";
+  try
   {
-      perror("Unable to read directory");
-      return(1);
+    count = 0;
+  for(i=0;i < 3300000;i+=5000)
+  {
+    query = sqlstring + to_string(i) + ";";
+    cout << query << endl;
+    res = stmt->executeQuery(query);
+    while(res->next())
+     {
+       count++;
+       videoid = res -> getInt("id");
+       pornstars = res -> getString("pornstars");
+       category = res -> getString("category");
+
+
+       tags = res -> getString("tags");
+    //   cats_vector = split(category, ";");
+    //   pornstars_vector = split(pornstars, ";");
+
+        thread tag1(classThread, videoid, "tags", tags,&tagvalues);
+        thread cats1(classThread,videoid, "categories", category,&catvalues);
+        thread porns1(classThread, videoid, "pornstars", pornstars,&pornstarvalues);
+
+        tag1.join();
+        cats1.join();
+        porns1.join();
+
+        cout << "Records Completed: " << count << endl;
+
+
+    //
+    //
+    //
+    }
+    tagvalues = tagvalues.substr(0, tagvalues.length() - 1);
+    catvalues = catvalues.substr(0, catvalues.length() - 1);
+    pornstarvalues = pornstarvalues.substr(0, pornstarvalues.length() - 1);
+
+    query = tagssql + tagvalues + ";";
+    outputfile << query << "\n";
+    query = catssql + catvalues + ";";
+    outputfile << query << "\n";
+    query = pornssql + pornstarvalues + ";";
+    outputfile << query << "\n";
+    tagvalues = "";
+    catvalues = "";
+    pornstarvalues = "";
+
+
+
+
+
+
+
+
+
+
+
+    //stmt -> execute(sqlstring);
+    cout << "Records completed: " << count << endl;
+
+
+  }
+
+  } catch (sql::SQLException & e) {
+    /*
+      MySQL Connector/C++ throws three different exceptions:
+
+      - sql::MethodNotImplementedException (derived from sql::SQLException)
+      - sql::InvalidArgumentException (derived from sql::SQLException)
+      - sql::SQLException (derived from std::runtime_error)
+    */
+    cout << "# ERR: SQLException in " << __FILE__;
+    cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+    /* what() (derived from std::runtime_error) fetches error message */
+    cout << "# ERR: " << e.what();
+    cout << " (MySQL error code: " << e.getErrorCode();
+    cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+    cout << "SQL String: " << sqlstring << endl;
+
+
   }
 
 
 
 
-  while( (entry=readdir(folder)) )
-  {
-    sprintf(buffer,"%s",entry->d_name);
-  if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-    {
-
-      files_vector.push_back(buffer);
-
-    }
-  }
-
-
-
-  for (std::string str: files_vector) {
-    cout << "Files: " << str << endl;
 
 
 
@@ -171,233 +316,12 @@ int main(int argc, char ** argv) {
 
 
 
-      ifilename = dirname + "/" + str;
-      cout << "Filename: " << ifilename << endl;
-      inputfile.open(ifilename);
-
-      if (!inputfile.is_open()) {
-        std::cout << "Error: File Open" << '\n';
-        return (3);
-      }
-
-  //pstmt = con->prepareStatement("INSERT INTO videos_test(,bid,ask) VALUES (?,?,?)");
-  //pstmt = con->prepareStatement("INSERT into videos (site, embed, thumb, title, tags, category,pornstars,duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-  insertsql = "Insert into videos (site, embed, thumb, title, tags, category,  pornstars,  duration, views, likes, dislikes, bigthumb, bigthumbs,video_id) VALUES ";
-  while (inputfile.good()) {
-
-    try {
-      count++;
-      insertcount++;
-
-      getline(inputfile, embed, '|');
-      getline(inputfile, thumb, '|');
-      getline(inputfile, thumbs, '|');
-      getline(inputfile, title, '|');
-      getline(inputfile, tags, '|');
-      getline(inputfile, category, '|');
-      getline(inputfile, pornstars, '|');
-      getline(inputfile, duration, '|');
-      getline(inputfile, views, '|');
-      getline(inputfile, likes, '|');
-      getline(inputfile, dislikes, '|');
-      getline(inputfile, bigthumb, '|');
-      getline(inputfile, bigthumbs, '\n');
-
-      title = mysql_conn->escapeString( title );
-      pornstars = mysql_conn->escapeString( pornstars );
-
-      if (views == "") {
-        views = "0";
-      }
-      if (likes == "") {
-        likes = "0";
-      }
-      if (dislikes == "") {
-        dislikes = "0";
-      }
-      if (duration == "") {
-        duration = "0";
-      }
-
-      if (std::regex_search(embed, match, rgx)) {
-        //std::cout << "match: " << match[1] << '\n';
-      }
-
-      temp = match[1];
-      video_id = temp.substr(temp.find_last_of("/\\") + 1);
-      //cout << "This is video id: " << video_id << endl;
-      //cout << "This is title: " << title << endl;
-      //cout << "This is duration: " << duration << endl;
-      value = "('pornhub.com','" + embed + "','";
-      value = value + thumb + "','";
-      value = value + title + "','";
-      value = value + tags + "','";
-      value = value + category + "','";
-      value = value + pornstars + "','";
-      value = value + duration + "','";
-      value = value + views + "','";
-      value = value + likes + "','";
-      value = value + dislikes + "','";
-      value = value + bigthumb + "','";
-      value = value + bigthumbs + "','";
-      value = value + video_id + "')," + "\n";
-
-
-      // pstmt -> setString(1, embed);
-      // pstmt -> setString(2, thumb);
-      // pstmt -> setString(3, title);
-      // pstmt -> setString(4, tags);
-      // pstmt -> setString(5, category);
-      // pstmt -> setString(6, pornstars);
-      // pstmt -> setString(7, duration);
-      // pstmt -> setString(8, views);
-      // pstmt -> setString(9, likes);
-      // pstmt -> setString(10, dislikes);
-      // pstmt -> setString(11, bigthumb);
-      // pstmt -> setString(12, bigthumbs);
-      // pstmt -> setString(13, video_id);
-
-      if (values == "") {
-        values = value;
-      } else {
-        values = values + value;
-      }
-
-      if (insertcount == 5000) {
-        values = values.substr(0, values.length() - 2);
-        sqlstring = insertsql + values + ";";
-        outputfile << sqlstring << "\n";
-        //stmt -> execute(sqlstring);
-        cout << "Records completed: " << count << endl;
-
-
-        insertcount = 0;
-        values = "";
-      }
-      lastid = 0;
-      //pstmt -> executeUpdate();
-      // sqlstring = "SELECT LAST_INSERT_ID() AS id;";
-      // res = stmt -> executeQuery(sqlstring);
-      // res -> next();
-      // lastid = res -> getInt("id");
-      //
-      // sqlstring = insertsql + " " + value;
-      //stmt->execute(sqlstring);
-      // if (!lastid == 0) {
-      //   tags_vector = split(tags, ";");
-      //   for (std::string str: tags_vector) {
-      //     //std::cout << str << std::endl;
-      //     query = "Select id from tags where name ='";
-      //     query = query + str;
-      //     query = query + "';";
-      //     //cout << "Select ID" << endl;
-      //     res = stmt -> executeQuery(query);
-      //     res -> next();
-      //     tagid = res -> getInt("id");
-      //     sqlstring = "Insert into tag_videos (tag_id, video_id) Values (";
-      //     sqlstring = sqlstring + to_string(int(tagid));
-      //     sqlstring = sqlstring + ",";
-      //     sqlstring = sqlstring + to_string(int(lastid));
-      //     sqlstring = sqlstring + ");";
-      //     //cout << "Tag Insert: " << str << endl;
-      //     stmt -> execute(sqlstring);
-      //     //cout << "Tag Successfully created" << endl;
-      //
-      //   } //for tags vector
-      //
-      //   cats_vector = split(category, ";");
-      //
-      //   for (std::string str: cats_vector) {
-      //     query = "Select id from categories where name ='";
-      //     query = query + str;
-      //     query = query + "';";
-      //     //cout << "Select ID" << endl;
-      //     res = stmt -> executeQuery(query);
-      //     res -> next();
-      //     catid = res -> getInt("id");
-      //     sqlstring = "Insert into category_videos (category_id, video_id) Values (";
-      //     sqlstring = sqlstring + to_string(int(catid));
-      //     sqlstring = sqlstring + ",";
-      //     sqlstring = sqlstring + to_string(int(lastid));
-      //     sqlstring = sqlstring + ");";
-      //     //cout << "Tag Insert: " << str << endl;
-      //     stmt -> execute(sqlstring);
-      //     //cout << "Tag Successfully created" << endl;
-      //
-      //   }
-      //
-      //   pornstars_vector = split(pornstars,";");
-      //   for (std::string str: pornstars_vector) {
-      //     query = "Select id from pornstars where name ='";
-      //     query = query + str;
-      //     query = query + "';";
-      //     //cout << "Select ID" << endl;
-      //     res = stmt -> executeQuery(query);
-      //     res -> next();
-      //     catid = res -> getInt("id");
-      //     sqlstring = "Insert into pornstar_videos (pornstar_id, video_id) Values (";
-      //     sqlstring = sqlstring + to_string(int(catid));
-      //     sqlstring = sqlstring + ",";
-      //     sqlstring = sqlstring + to_string(int(lastid));
-      //     sqlstring = sqlstring + ");";
-      //     //cout << "Tag Insert: " << str << endl;
-      //     stmt -> execute(sqlstring);
-      //     //cout << "Tag Successfully created" << endl;
-      //
-      //   }
-      //
-      // } //if !lastid
-    } catch (sql::SQLException & e) {
-      /*
-        MySQL Connector/C++ throws three different exceptions:
-
-        - sql::MethodNotImplementedException (derived from sql::SQLException)
-        - sql::InvalidArgumentException (derived from sql::SQLException)
-        - sql::SQLException (derived from std::runtime_error)
-      */
-      cout << "# ERR: SQLException in " << __FILE__;
-      cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
-      /* what() (derived from std::runtime_error) fetches error message */
-      cout << "# ERR: " << e.what();
-      cout << " (MySQL error code: " << e.getErrorCode();
-      cout << ", SQLState: " << e.getSQLState() << " )" << endl;
-
-      errorfile << "# ERR: " << e.what() << " (MySQL error code: " << e.getErrorCode() << ", SQLState: " << e.getSQLState() << " )" << endl;
-      errorfile << "SQL String: " << sqlstring << endl;
-      errorfile << "Query String: " << query << endl;
-      errorfile << "Embed: " << embed << "\n";
-      errorfile << "Thumb: " << thumb << "\n";
-      errorfile << "Title: " << title << "\n";
-      errorfile << "Tags: " << tags << "\n";
-      errorfile << "Category: " << category << "\n";
-      errorfile << "Pornstars: " << pornstars << "\n";
-      errorfile << "Duration: " << duration << "\n";
-      errorfile << "Views: " << views << "\n";
-      errorfile << "Likes: " << likes << "\n";
-      errorfile << "Dislikes: " << dislikes << "\n";
-      errorfile << "BigThumb: " << bigthumb << "\n";
-      errorfile << "BigThumbs: " << bigthumbs << "\n";
-      errorfile << "Video ID: " << video_id << "\n\n\n";
-
-    }
 
 
 
-  }  //end while
-
-  std::cout << "Records found: " << count << '\n';
-  inputfile.close();
-
-
-
-
-
-} //for files_vector
 outputfile.close();
-errorfile.close();
-catfile.close();
-tagfile.close();
-debugfile.close();
+
+
 
 return (0);
 }
